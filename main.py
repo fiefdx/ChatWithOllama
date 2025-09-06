@@ -13,6 +13,7 @@ from multiprocessing import Process
 from multiprocessing import Queue as PQueue
 
 import pygame
+import pygame_gui
 import sounddevice as sd
 import soundfile as sf
 from scipy.io.wavfile import write, read
@@ -95,6 +96,7 @@ class ThinkThread(StoppableThread):
                             r = self.client.chat(model = self.chat_model, messages = self.context)
                             self.query = None
                             self.main_thread.response = r
+                            self.main_thread.update_text = True
                             self.context.append({"role": r.message.role, "content": r.message.content})
                             if len(self.context) > self.context_length:
                                 self.context.pop(0)
@@ -136,6 +138,9 @@ class UserInterface(object):
         self.message = None
         self.samplerate = 352800 # 44100
         self.response = None
+        self.manager = pygame_gui.UIManager((1280, 640))
+        self.text_box = pygame_gui.elements.ui_text_box.UITextBox("<p>test</p>", relative_rect = pygame.Rect(10, 90, 1260, 540), manager = self.manager)
+        self.update_text = False
 
     def quit(self):
         TQ.put(StopSignal)
@@ -161,6 +166,7 @@ class UserInterface(object):
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_SPACE:
                     self.status = "waiting"
+            self.manager.process_events(event)
 
     def render(self):
         if self.status == "recording":
@@ -192,26 +198,31 @@ class UserInterface(object):
         if self.message is not None:
             message = self.font.render("Q: %s" % self.message, True, (255, 255, 255))
             self.window.blit(message, (10, 60))
-        if self.response is not None:
-            lines = self.response.message.content.split("\n")
-            n = 0
-            for line in lines:
-                striped = line.strip()
-                if striped != "":
-                    if n == 0:
-                        reply = self.font.render("A: %s" % line, True, (255, 255, 255))
-                        self.window.blit(reply, (10, 90))
-                    else:
-                        reply = self.font.render("   %s" % line, True, (255, 255, 255))
-                        self.window.blit(reply, (10, 90 + n * 20))
-                    n += 1
-        pygame.display.update()
+        if self.response is not None and self.update_text is True:
+            self.text_box.set_text(self.response.message.content)
+            self.update_text = False
+            # lines = self.response.message.content.split("\n")
+            # n = 0
+            # for line in lines:
+            #     striped = line.strip()
+            #     if striped != "":
+            #         if n == 0:
+            #             reply = self.font.render("A: %s" % line, True, (255, 255, 255))
+            #             self.window.blit(reply, (10, 90))
+            #         else:
+            #             reply = self.font.render("   %s" % line, True, (255, 255, 255))
+            #             self.window.blit(reply, (10, 90 + n * 20))
+            #         n += 1
+        # pygame.display.update()
 
     def run(self):
         while self.running:
             self.process_input()
             self.render()
-            self.clock.tick(60) # for test
+            time_delta = self.clock.tick(60) / 1000.0 # for test
+            self.manager.update(time_delta)
+            self.manager.draw_ui(self.window)
+            pygame.display.update()
         pygame.joystick.quit()
 
 if __name__ == "__main__":
