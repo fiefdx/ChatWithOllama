@@ -193,8 +193,18 @@ class UserInterface(object):
             message = self.font.render("Q: %s" % self.message, True, (255, 255, 255))
             self.window.blit(message, (10, 60))
         if self.response is not None:
-            reply = self.font.render("A: %s" % self.response.message.content, True, (255, 255, 255))
-            self.window.blit(reply, (10, 90))
+            lines = self.response.message.content.split("\n")
+            n = 0
+            for line in lines:
+                striped = line.strip()
+                if striped != "":
+                    if n == 0:
+                        reply = self.font.render("A: %s" % line, True, (255, 255, 255))
+                        self.window.blit(reply, (10, 90))
+                    else:
+                        reply = self.font.render("   %s" % line, True, (255, 255, 255))
+                        self.window.blit(reply, (10, 90 + n * 20))
+                    n += 1
         pygame.display.update()
 
     def run(self):
