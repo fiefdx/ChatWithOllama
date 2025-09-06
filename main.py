@@ -41,10 +41,16 @@ class AudioPlayer(Process):
         try:
             signal.signal(signal.SIGTERM, self.sig_handler)
             signal.signal(signal.SIGINT, self.sig_handler)
+            self.tts = TTS("tts_models/en/ljspeech/glow-tts", progress_bar = False).to("cuda")
             while True:
                 task = self.task_queue.get()
                 if task != StopSignal:
-                    pass
+                    if os.path.exists("./output.wav"):
+                        os.remove("./output.wav")
+                    self.tts.tts_to_file(text = task, file_path = "./output.wav")
+                    samplerate, data = read("./output.wav")
+                    sd.play(data, samplerate)
+                    sd.wait()
                 else:
                     break
         except Exception as e:
@@ -72,7 +78,6 @@ class ThinkThread(StoppableThread):
         self.model = whisper.load_model("small.en") # base.en
         self.client = Client("http://localhost:11434")
         self.chat_model = 'llama3.2:3b'
-        self.tts = TTS("tts_models/en/ljspeech/glow-tts", progress_bar = False).to("cuda")
         self.context = []
         self.context_length = 1024
 
@@ -93,13 +98,7 @@ class ThinkThread(StoppableThread):
                             self.context.append({"role": r.message.role, "content": r.message.content})
                             if len(self.context) > self.context_length:
                                 self.context.pop(0)
-                            if os.path.exists("./output.wav"):
-                                os.remove("./output.wav")
-                            self.tts.tts_to_file(text = r.message.content, file_path = "./output.wav")
-                            samplerate, data = read("./output.wav")
-                            sd.play(data, samplerate)
-                            sd.wait()
-                            # print(self.context)
+                            TQ.put(str(r.message.content))
                         else:
                             time.sleep(0.1)
                     except Exception as e:
@@ -206,10 +205,10 @@ class UserInterface(object):
         pygame.joystick.quit()
 
 if __name__ == "__main__":
-    think = ThinkThread()
-    think.start()
     p = AudioPlayer(TQ)
     p.start()
+    think = ThinkThread()
+    think.start()
     UserInterface = UserInterface(think)
     UserInterface.run()
     think.join()
