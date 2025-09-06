@@ -2,12 +2,15 @@ import os
 import sys
 import math
 import time
+import signal
 import random
 import tempfile
 import queue
 from queue import Queue, Empty
 import threading
 from threading import Thread
+from multiprocessing import Process
+from multiprocessing import Queue as PQueue
 
 import pygame
 import sounddevice as sd
@@ -22,6 +25,30 @@ __version__ = "0.0.1"
 
 os.environ['SDL_VIDEO_CENTERED'] = '1'
 Q = queue.Queue(100)
+TQ = PQueue(10)
+StopSignal = "stop_signal"
+
+
+class AudioPlayer(Process):
+    def __init__(self, task_queue):
+        Process.__init__(self)
+        self.task_queue = task_queue
+
+    def sig_handler(self, sig, frame):
+        print("Caught signal: %s" % sig)
+
+    def run(self):
+        try:
+            signal.signal(signal.SIGTERM, self.sig_handler)
+            signal.signal(signal.SIGINT, self.sig_handler)
+            while True:
+                task = self.task_queue.get()
+                if task != StopSignal:
+                    pass
+                else:
+                    break
+        except Exception as e:
+            print(e)
 
 
 class StoppableThread(Thread):
@@ -112,6 +139,7 @@ class UserInterface(object):
         self.response = None
 
     def quit(self):
+        TQ.put(StopSignal)
         self.think_thread.stop()
         self.running = False
 
@@ -180,7 +208,10 @@ class UserInterface(object):
 if __name__ == "__main__":
     think = ThinkThread()
     think.start()
+    p = AudioPlayer(TQ)
+    p.start()
     UserInterface = UserInterface(think)
     UserInterface.run()
     think.join()
+    p.join()
     pygame.quit()
