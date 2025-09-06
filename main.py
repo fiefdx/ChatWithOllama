@@ -47,36 +47,39 @@ class AudioPlayer(Process):
             signal.signal(signal.SIGINT, self.sig_handler)
             self.tts = TTS("tts_models/en/ljspeech/glow-tts", progress_bar = False).to("cuda")
             while True:
-                task = None
                 try:
-                    task = self.task_queue.get(block = False)
-                except Empty:
-                    pass
-                if task != StopSignal:
-                    if task == StopPlay:
-                        sd.stop()
-                    elif task == PlayAgain:
-                        if self.stream and self.stream.active:
+                    task = None
+                    try:
+                        task = self.task_queue.get(block = False)
+                    except Empty:
+                        pass
+                    if task != StopSignal:
+                        if task == StopPlay:
                             sd.stop()
-                        if os.path.exists("./output.wav"):
+                        elif task == PlayAgain:
+                            if self.stream and self.stream.active:
+                                sd.stop()
+                            if os.path.exists("./output.wav"):
+                                samplerate, data = read("./output.wav")
+                                self.stream = sd.play(data, samplerate)
+                        elif task is None:
+                            if self.stream is None:
+                                time.sleep(0.5)
+                            elif self.stream and self.stream.active:
+                                time.sleep(0.5)
+                            else:
+                                sd.stop()
+                        else:
+                            if os.path.exists("./output.wav"):
+                                os.remove("./output.wav")
+                            self.tts.tts_to_file(text = task, file_path = "./output.wav")
                             samplerate, data = read("./output.wav")
                             self.stream = sd.play(data, samplerate)
-                    elif task is None:
-                        if self.stream is None:
-                            time.sleep(0.5)
-                        elif self.stream and self.stream.active:
-                            time.sleep(0.5)
-                        else:
-                            sd.stop()
+                            # sd.wait()
                     else:
-                        if os.path.exists("./output.wav"):
-                            os.remove("./output.wav")
-                        self.tts.tts_to_file(text = task, file_path = "./output.wav")
-                        samplerate, data = read("./output.wav")
-                        self.stream = sd.play(data, samplerate)
-                        # sd.wait()
-                else:
-                    break
+                        break
+                except Exception as e:
+                    print(e)
         except Exception as e:
             print(e)
 
@@ -185,6 +188,12 @@ class UserInterface(object):
         print("stop")
         TQ.put(StopPlay)
 
+    def new(self):
+        print("new")
+        self.think_thread.context.clear()
+        self.query_box.set_text("")
+        self.reply_box.set_text("")
+
     def discard(self):
         print("discard")
         self.think_thread.context.pop(-1)
@@ -218,6 +227,8 @@ class UserInterface(object):
                     self.stop()
                 elif event.ui_element == self.discard_button:
                     self.discard()
+                elif event.ui_element == self.new_chat_button:
+                    self.new()
             self.manager.process_events(event)
 
     def render(self):
