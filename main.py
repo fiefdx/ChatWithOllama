@@ -87,18 +87,19 @@ class AudioPlayer(Process):
                                 self.stream = sd.play(data, samplerate)
                         elif task is None:
                             if self.stream is None:
-                                time.sleep(0.5)
+                                time.sleep(0.1)
                             elif self.stream and self.stream.active:
-                                time.sleep(0.5)
+                                time.sleep(0.1)
                             else:
                                 sd.stop()
                         else:
                             if os.path.exists("./output.wav"):
                                 os.remove("./output.wav")
+                            # task = task.replace("`", " ")
+                            # task = task.replace('"', " ")
                             self.tts.tts_to_file(text = task, file_path = "./output.wav")
                             samplerate, data = read("./output.wav")
                             self.stream = sd.play(data, samplerate)
-                            # sd.wait()
                     else:
                         break
                 except Exception as e:
@@ -125,9 +126,9 @@ class ThinkThread(StoppableThread):
         Thread.__init__(self)
         self.main_thread = None
         self.query = None
-        self.model = whisper.load_model("small.en") # base.en
+        self.model = whisper.load_model("base.en") # base.en, small.en
         self.client = Client("http://localhost:11434")
-        self.chat_model = 'llama3.2:3b'
+        self.chat_model = 'gemma3:4b'
         self.context = []
         self.context_length = 4096
 
@@ -202,7 +203,7 @@ class UserInterface(object):
         self.stop_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((10, 595), (100, 40)), text = 'Stop', manager = self.manager)
         self.play_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((120, 595), (100, 40)), text = 'Play', manager = self.manager)
         self.discard_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((230, 595), (100, 40)), text = 'Discard', manager = self.manager)
-        self.chat_models = pygame_gui.elements.ui_drop_down_menu.UIDropDownMenu(options_list = self.models, starting_option = self.models[0], relative_rect = pygame.Rect((340, 595), (300, 40)), expansion_height_limit = 300, manager = self.manager)
+        self.chat_models = pygame_gui.elements.ui_drop_down_menu.UIDropDownMenu(options_list = self.models, starting_option = self.think_thread.chat_model, relative_rect = pygame.Rect((340, 595), (300, 40)), expansion_height_limit = 300, manager = self.manager)
         self.new_chat_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((1170, 595), (100, 40)), text = 'New Chat', manager = self.manager)
 
     def quit(self):
@@ -230,6 +231,10 @@ class UserInterface(object):
         self.think_thread.context.pop(-1)
         self.query_box.set_text("")
         self.reply_box.set_text("")
+
+    def change_chat_model(self, model):
+        print("change model to: %s" % model)
+        self.think_thread.chat_model = model
 
     def process_input(self):
         for event in pygame.event.get():
@@ -259,6 +264,9 @@ class UserInterface(object):
                     self.discard()
                 elif event.ui_element == self.new_chat_button:
                     self.new()
+            elif event.type == pygame_gui.UI_DROP_DOWN_MENU_CHANGED:
+                if event.ui_element == self.chat_models:
+                    self.change_chat_model(event.text)
             self.manager.process_events(event)
 
     def render(self):
@@ -281,34 +289,15 @@ class UserInterface(object):
             if self.message is None:
                 self.think_thread.query = "input.wav"
                 self.message = ""
-                # r = self.model.transcribe("input.wav")
-                # self.message = r["text"]
-                # self.think_thread.query = self.message
-
         self.window.fill(0)
         status = self.font_command.render(self.status, True, (255, 255, 255))
         self.window.blit(status, (1120, 20))
         if self.message is not None and self.update_query:
-            # message = self.font.render("%s" % self.message, True, (255, 255, 255))
-            # self.window.blit(message, (10, 60))
             self.query_box.set_text(self.message)
             self.update_query = False
         if self.response is not None and self.update_reply:
             self.reply_box.set_text(self.response.message.content)
             self.update_reply = False
-            # lines = self.response.message.content.split("\n")
-            # n = 0
-            # for line in lines:
-            #     striped = line.strip()
-            #     if striped != "":
-            #         if n == 0:
-            #             reply = self.font.render("A: %s" % line, True, (255, 255, 255))
-            #             self.window.blit(reply, (10, 90))
-            #         else:
-            #             reply = self.font.render("   %s" % line, True, (255, 255, 255))
-            #             self.window.blit(reply, (10, 90 + n * 20))
-            #         n += 1
-        # pygame.display.update()
 
     def run(self):
         while self.running:
