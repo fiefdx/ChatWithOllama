@@ -28,12 +28,15 @@ os.environ['SDL_VIDEO_CENTERED'] = '1'
 Q = queue.Queue(100)
 TQ = PQueue(10)
 StopSignal = "stop_signal"
+StopPlay = "stop_play"
+PlayAgain = "play_again"
 
 
 class AudioPlayer(Process):
     def __init__(self, task_queue):
         Process.__init__(self)
         self.task_queue = task_queue
+        self.stream = None
 
     def sig_handler(self, sig, frame):
         print("Caught signal: %s" % sig)
@@ -44,14 +47,36 @@ class AudioPlayer(Process):
             signal.signal(signal.SIGINT, self.sig_handler)
             self.tts = TTS("tts_models/en/ljspeech/glow-tts", progress_bar = False).to("cuda")
             while True:
-                task = self.task_queue.get()
+                task = None
+                try:
+                    task = self.task_queue.get(block = False)
+                except Empty:
+                    pass
                 if task != StopSignal:
-                    if os.path.exists("./output.wav"):
-                        os.remove("./output.wav")
-                    self.tts.tts_to_file(text = task, file_path = "./output.wav")
-                    samplerate, data = read("./output.wav")
-                    sd.play(data, samplerate)
-                    sd.wait()
+                    if task == StopPlay:
+                        sd.stop()
+                    elif task == PlayAgain:
+                        if self.stream and self.stream.active:
+                            sd.stop()
+                        if os.path.exists("./output.wav"):
+                            os.remove("./output.wav")
+                        self.tts.tts_to_file(text = task, file_path = "./output.wav")
+                        samplerate, data = read("./output.wav")
+                        self.stream = sd.play(data, samplerate)
+                    elif task is None:
+                        if self.stream is None:
+                            time.sleep(0.5)
+                        elif self.stream and self.stream.active:
+                            time.sleep(0.5)
+                        else:
+                            sd.stop()
+                    else:
+                        if os.path.exists("./output.wav"):
+                            os.remove("./output.wav")
+                        self.tts.tts_to_file(text = task, file_path = "./output.wav")
+                        samplerate, data = read("./output.wav")
+                        self.stream = sd.play(data, samplerate)
+                        # sd.wait()
                 else:
                     break
         except Exception as e:
@@ -80,7 +105,7 @@ class ThinkThread(StoppableThread):
         self.client = Client("http://localhost:11434")
         self.chat_model = 'llama3.2:3b'
         self.context = []
-        self.context_length = 1024
+        self.context_length = 4096
 
     def run(self):
         try:
@@ -142,14 +167,27 @@ class UserInterface(object):
         self.manager = pygame_gui.UIManager((1280, 640))
         self.query_box = pygame_gui.elements.ui_text_box.UITextBox("", relative_rect = pygame.Rect(10, 10, 1100, 70), manager = self.manager)
         self.update_query = False
-        self.reply_box = pygame_gui.elements.ui_text_box.UITextBox("", relative_rect = pygame.Rect(10, 90, 1260, 540), manager = self.manager)
+        self.reply_box = pygame_gui.elements.ui_text_box.UITextBox("", relative_rect = pygame.Rect(10, 90, 1260, 500), manager = self.manager)
         self.update_reply = False
-
+        self.stop_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((10, 595), (100, 40)), text = 'Stop', manager = self.manager)
+        self.play_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((120, 595), (100, 40)), text = 'Play', manager = self.manager)
+        self.discard_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((230, 595), (100, 40)), text = 'Discard', manager = self.manager)
 
     def quit(self):
         TQ.put(StopSignal)
         self.think_thread.stop()
         self.running = False
+
+    def play(self):
+        print("play")
+        TQ.put(PlayAgain)
+
+    def stop(self):
+        print("stop")
+        TQ.put(StopPlay)
+
+    def discard(self):
+        print("discard")
 
     def process_input(self):
         for event in pygame.event.get():
@@ -170,6 +208,13 @@ class UserInterface(object):
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_SPACE:
                     self.status = "waiting"
+            elif event.type == pygame_gui.UI_BUTTON_PRESSED:
+                if event.ui_element == self.play_button:
+                    self.play()
+                elif event.ui_element == self.stop_button:
+                    self.stop()
+                elif event.ui_element == self.discard_button:
+                    self.discard()
             self.manager.process_events(event)
 
     def render(self):
@@ -197,7 +242,7 @@ class UserInterface(object):
                 # self.think_thread.query = self.message
 
         self.window.fill(0)
-        status = self.font_command.render(self.status, True, (255, 0, 255))
+        status = self.font_command.render(self.status, True, (255, 255, 255))
         self.window.blit(status, (1120, 20))
         if self.message is not None and self.update_query:
             # message = self.font.render("%s" % self.message, True, (255, 255, 255))
