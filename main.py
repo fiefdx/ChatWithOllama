@@ -172,6 +172,7 @@ class UserInterface(object):
         self.stop_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((10, 595), (100, 40)), text = 'Stop', manager = self.manager)
         self.play_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((120, 595), (100, 40)), text = 'Play', manager = self.manager)
         self.discard_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((230, 595), (100, 40)), text = 'Discard', manager = self.manager)
+        self.new_chat_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((1170, 595), (100, 40)), text = 'New Chat', manager = self.manager)
 
     def quit(self):
         TQ.put(StopSignal)
@@ -188,6 +189,10 @@ class UserInterface(object):
 
     def discard(self):
         print("discard")
+        self.think_thread.context.pop(-1)
+        self.think_thread.context.pop(-1)
+        self.query_box.set_text("")
+        self.reply_box.set_text("")
 
     def process_input(self):
         for event in pygame.event.get():
