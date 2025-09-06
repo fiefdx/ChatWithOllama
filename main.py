@@ -59,10 +59,8 @@ class AudioPlayer(Process):
                         if self.stream and self.stream.active:
                             sd.stop()
                         if os.path.exists("./output.wav"):
-                            os.remove("./output.wav")
-                        self.tts.tts_to_file(text = task, file_path = "./output.wav")
-                        samplerate, data = read("./output.wav")
-                        self.stream = sd.play(data, samplerate)
+                            samplerate, data = read("./output.wav")
+                            self.stream = sd.play(data, samplerate)
                     elif task is None:
                         if self.stream is None:
                             time.sleep(0.5)
