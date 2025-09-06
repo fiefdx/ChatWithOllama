@@ -189,7 +189,7 @@ class UserInterface(object):
         pygame.mixer.init()
         self.window = pygame.display.set_mode((1280, 640)) # pygame.FULLSCREEN | pygame.SCALED) # pygame.RESIZABLE | pygame.SCALED)
         pygame.display.set_caption("Chat - v%s" % __version__)
-        # pygame.display.set_icon(pygame.image.load("assets/image/icon.png"))
+        pygame.display.set_icon(pygame.image.load("c.png"))
         pygame.joystick.init()
         self.clock = pygame.time.Clock()
         self.running = True
