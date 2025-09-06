@@ -207,16 +207,16 @@ class UserInterface(object):
                 self.models.append(model["model"])
         self.models.sort()
         self.manager = pygame_gui.UIManager((1280, 640), theme_path = "theme.json")
-        self.query_box = pygame_gui.elements.ui_text_entry_box.UITextEntryBox(relative_rect = pygame.Rect(10, 10, 1190, 70), manager = self.manager)
+        self.query_box = pygame_gui.elements.ui_text_entry_box.UITextEntryBox(relative_rect = pygame.Rect(10, 10, 1100, 70), manager = self.manager)
         self.update_query = False
-        self.send_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((1200, 10), (70, 70)), text = 'Send', manager = self.manager)
+        self.send_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((1110, 10), (70, 70)), text = 'Send', manager = self.manager)
+        self.record_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((1180, 10), (90, 70)), text = 'Record', manager = self.manager)
         self.reply_box = pygame_gui.elements.ui_text_box.UITextBox("", relative_rect = pygame.Rect(10, 90, 1260, 500), manager = self.manager)
         self.update_reply = False
         self.stop_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((10, 595), (100, 40)), text = 'Stop', manager = self.manager)
         self.play_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((120, 595), (100, 40)), text = 'Play', manager = self.manager)
         self.discard_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((230, 595), (100, 40)), text = 'Discard', manager = self.manager)
         self.chat_models = pygame_gui.elements.ui_drop_down_menu.UIDropDownMenu(options_list = self.models, starting_option = self.think_thread.chat_model, relative_rect = pygame.Rect((340, 595), (300, 40)), expansion_height_limit = 300, manager = self.manager)
-        self.record_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((650, 595), (100, 40)), text = 'Record', manager = self.manager)
         self.new_chat_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((1170, 595), (100, 40)), text = 'New Chat', manager = self.manager)
 
     def quit(self):
