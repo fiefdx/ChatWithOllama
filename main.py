@@ -90,13 +90,14 @@ class ThinkThread(StoppableThread):
                         if self.query is not None:
                             r = self.model.transcribe("input.wav")
                             self.main_thread.message = r["text"].strip()
+                            self.main_thread.update_query = True
                             self.context.append({"role": "user", "content": self.main_thread.message})
                             if len(self.context) > self.context_length:
                                 self.context.pop(0)
                             r = self.client.chat(model = self.chat_model, messages = self.context)
                             self.query = None
                             self.main_thread.response = r
-                            self.main_thread.update_text = True
+                            self.main_thread.update_reply = True
                             self.context.append({"role": r.message.role, "content": r.message.content})
                             if len(self.context) > self.context_length:
                                 self.context.pop(0)
@@ -139,8 +140,11 @@ class UserInterface(object):
         self.samplerate = 352800 # 44100
         self.response = None
         self.manager = pygame_gui.UIManager((1280, 640))
-        self.text_box = pygame_gui.elements.ui_text_box.UITextBox("<p>test</p>", relative_rect = pygame.Rect(10, 90, 1260, 540), manager = self.manager)
-        self.update_text = False
+        self.query_box = pygame_gui.elements.ui_text_box.UITextBox("", relative_rect = pygame.Rect(10, 10, 1100, 70), manager = self.manager)
+        self.update_query = False
+        self.reply_box = pygame_gui.elements.ui_text_box.UITextBox("", relative_rect = pygame.Rect(10, 90, 1260, 540), manager = self.manager)
+        self.update_reply = False
+
 
     def quit(self):
         TQ.put(StopSignal)
@@ -193,14 +197,16 @@ class UserInterface(object):
                 # self.think_thread.query = self.message
 
         self.window.fill(0)
-        status = self.font_command.render(self.status, True, (0, 0, 255))
-        self.window.blit(status, (10, 10))
-        if self.message is not None:
-            message = self.font.render("Q: %s" % self.message, True, (255, 255, 255))
-            self.window.blit(message, (10, 60))
-        if self.response is not None and self.update_text is True:
-            self.text_box.set_text(self.response.message.content)
-            self.update_text = False
+        status = self.font_command.render(self.status, True, (255, 0, 255))
+        self.window.blit(status, (1120, 20))
+        if self.message is not None and self.update_query:
+            # message = self.font.render("%s" % self.message, True, (255, 255, 255))
+            # self.window.blit(message, (10, 60))
+            self.query_box.set_text(self.message)
+            self.update_query = False
+        if self.response is not None and self.update_reply:
+            self.reply_box.set_text(self.response.message.content)
+            self.update_reply = False
             # lines = self.response.message.content.split("\n")
             # n = 0
             # for line in lines:
