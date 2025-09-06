@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import math
 import time
 import signal
@@ -30,6 +31,28 @@ TQ = PQueue(10)
 StopSignal = "stop_signal"
 StopPlay = "stop_play"
 PlayAgain = "play_again"
+
+
+theme_data = {
+    "drop_down_menu": {
+        "misc": {
+            "expand_direction": "up"
+        },
+        "colours": {
+            "normal_bg": "#25292e",
+            "hovered_bg": "#35393e"
+        }
+    },
+    "drop_down_menu.#selected_option": {
+        "misc": {
+            "border_width": "1",
+            "open_button_width": "10"
+        }
+    }
+}
+theme_file_path = "theme.json"
+with open(theme_file_path, "w") as fp:
+    json.dump(theme_data, fp, indent = 4)
 
 
 class AudioPlayer(Process):
@@ -165,7 +188,13 @@ class UserInterface(object):
         self.message = None
         self.samplerate = 352800 # 44100
         self.response = None
-        self.manager = pygame_gui.UIManager((1280, 640))
+        self.models = []
+        models = self.think_thread.client.list()
+        if models and "models" in models:
+            for model in models["models"]:
+                self.models.append(model["model"])
+        self.models.sort()
+        self.manager = pygame_gui.UIManager((1280, 640), theme_path = "theme.json")
         self.query_box = pygame_gui.elements.ui_text_box.UITextBox("", relative_rect = pygame.Rect(10, 10, 1100, 70), manager = self.manager)
         self.update_query = False
         self.reply_box = pygame_gui.elements.ui_text_box.UITextBox("", relative_rect = pygame.Rect(10, 90, 1260, 500), manager = self.manager)
@@ -173,6 +202,7 @@ class UserInterface(object):
         self.stop_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((10, 595), (100, 40)), text = 'Stop', manager = self.manager)
         self.play_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((120, 595), (100, 40)), text = 'Play', manager = self.manager)
         self.discard_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((230, 595), (100, 40)), text = 'Discard', manager = self.manager)
+        self.chat_models = pygame_gui.elements.ui_drop_down_menu.UIDropDownMenu(options_list = self.models, starting_option = self.models[0], relative_rect = pygame.Rect((340, 595), (300, 40)), expansion_height_limit = 300, manager = self.manager)
         self.new_chat_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((1170, 595), (100, 40)), text = 'New Chat', manager = self.manager)
 
     def quit(self):
