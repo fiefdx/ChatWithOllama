@@ -1,5 +1,6 @@
 pygame
 pygame_gui
+scipy
 sounddevice
 soundfile
 openai-whisper
