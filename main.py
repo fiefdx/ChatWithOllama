@@ -146,35 +146,32 @@ class ThinkThread(StoppableThread):
         self.context_length = 4096
 
     def run(self):
-        try:
-            while True:
-                if not self.stopped():
-                    try:
-                        if self.query is not None:
-                            if self.query == "input.wav":
-                                r = self.model.transcribe("input.wav")
-                                self.main_thread.message = r["text"].strip()
-                                self.main_thread.update_query = True
-                            self.context.append({"role": "user", "content": self.main_thread.message})
-                            if len(self.context) > self.context_length:
-                                self.context.pop(0)
-                            r = self.client.chat(model = self.chat_model, messages = self.context, think = False)
-                            self.query = None
-                            self.main_thread.response = r
-                            self.main_thread.update_reply = True
-                            self.context.append({"role": r.message.role, "content": r.message.content})
-                            if len(self.context) > self.context_length:
-                                self.context.pop(0)
-                            TQ.put(str(r.message.content))
-                        else:
-                            time.sleep(0.1)
-                    except Exception as e:
-                        print(e)
-                        time.sleep(0.1)
-                else:
-                    break
-        except Exception as e:
-            print(e)
+        while True:
+            if not self.stopped():
+                try:
+                    if self.query is not None:
+                        if self.query == "input.wav":
+                            r = self.model.transcribe("input.wav")
+                            self.main_thread.message = r["text"].strip()
+                            self.main_thread.update_query = True
+                        self.context.append({"role": "user", "content": self.main_thread.message})
+                        if len(self.context) > self.context_length:
+                            self.context.pop(0)
+                        r = self.client.chat(model = self.chat_model, messages = self.context, think = False)
+                        self.query = None
+                        self.main_thread.response = r
+                        self.main_thread.update_reply = True
+                        self.context.append({"role": r.message.role, "content": r.message.content})
+                        if len(self.context) > self.context_length:
+                            self.context.pop(0)
+                        TQ.put(str(r.message.content))
+                    else:
+                        time.sleep(0.01)
+                except Exception as e:
+                    print(e)
+                    time.sleep(0.01)
+            else:
+                break
 
 
 def callback(indata, frames, time, status):
@@ -196,12 +193,12 @@ class UserInterface(object):
         pygame.joystick.init()
         self.clock = pygame.time.Clock()
         self.running = True
-        self.status = "idling"
+        self.status = "initing"
         self.font_command = pygame.font.SysFont('Arial', 40)
         self.font = pygame.font.SysFont('Arial', 20)
         self.sf = None
         self.message = None
-        self.samplerate = 352800 # 44100
+        self.samplerate =  96000 # 44100
         self.response = None
         self.models = []
         models = self.think_thread.client.list()
@@ -312,8 +309,18 @@ class UserInterface(object):
             if self.sf is None:
                 pass
             else:
+                d = None
+                try:
+                    d = Q.get(block = False)
+                except Empty:
+                    pass
+                if d is not None:
+                    self.sf.write(d)
+                    self.sf.flush()
                 self.sf.close()
                 self.sd.close()
+                self.sf = None
+                self.sd = None
         if self.status == "waiting":
             if self.message is None:
                 self.think_thread.query = "input.wav"
@@ -338,11 +345,11 @@ class UserInterface(object):
 
 if __name__ == "__main__":
     p = AudioPlayer(TQ)
+    p.daemon = True
     p.start()
     think = ThinkThread()
     think.start()
     UserInterface = UserInterface(think)
     UserInterface.run()
     think.join()
-    p.join()
     pygame.quit()
