@@ -9,6 +9,10 @@ User can voice talk to llm models deployed on ollama and get voice response.
 
 # Usage
 
+python3.11 or python3.10, first using python3.11 -m pip install ./requirements.txt
+
+then, run python3.11 ./main.py to start the application.
+
 Pressed on "Record" button and hold it down for recording,
 
 Release "Record" button will trigger STT to generate text query, and the response will go through TTS, then output through speakers.

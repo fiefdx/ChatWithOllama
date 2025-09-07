@@ -1,0 +1,10 @@
+pygame
+pygame_gui
+sounddevice
+soundfile
+openai-whisper
+ollama
+markdown
+TTS
+emoji
+certifi
