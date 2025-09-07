@@ -1,2 +1,5 @@
 *.wav
 *.json
+build
+dist
+main.spec
