@@ -54,11 +54,21 @@ theme_data = {
         }
     },
     "text_box": {
+        "font": {
+            "name": "ubuntu-mono",
+            "size": "16",
+            "style": "regular"
+        },
         "colours": {
             "normal_text": "#ffffff"
         }
     },
     "text_entry_box": {
+        "font": {
+            "name": "ubuntu-mono",
+            "size": "16",
+            "style": "regular"
+        },
         "colours": {
             "normal_text": "#ffffff"
         }
@@ -207,6 +217,14 @@ class UserInterface(object):
                 self.models.append(model["model"])
         self.models.sort()
         self.manager = pygame_gui.UIManager((1280, 640), theme_path = "theme.json")
+        self.manager.add_font_paths(
+            "ubuntu-mono",
+            regular_path = "font/NotoSansSC-Regular.ttf",
+            bold_path = "font/NotoSansSC-Bold.ttf",
+            italic_path = "font/NotoSansSC-Regular.ttf",
+            bold_italic_path = "font/NotoSansSC-Bold.ttf"
+        )
+        self.manager.preload_fonts([{'name': 'ubuntu-mono', 'point_size': 16, 'style': 'regular', 'antialiased': '1'}])
         self.query_box = pygame_gui.elements.ui_text_entry_box.UITextEntryBox(relative_rect = pygame.Rect(10, 10, 1100, 70), manager = self.manager)
         self.update_query = False
         self.send_button = pygame_gui.elements.UIButton(relative_rect = pygame.Rect((1110, 10), (70, 70)), text = 'Send', manager = self.manager)
