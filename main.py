@@ -12,6 +12,8 @@ import threading
 from threading import Thread
 from multiprocessing import Process
 from multiprocessing import Queue as PQueue
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
 
 import pygame
 import pygame_gui
@@ -281,8 +283,8 @@ class UserInterface(object):
                 if event.ui_element == self.record_button:
                     if os.path.exists("input.wav"):
                         os.remove("input.wav")
-                    self.sf = sf.SoundFile("input.wav", mode = 'x', samplerate = self.samplerate, channels = 2)
-                    self.sd = sd.InputStream(samplerate = self.samplerate, channels = 2, callback = callback)
+                    self.sf = sf.SoundFile("input.wav", mode = 'x', samplerate = self.samplerate, channels = 1)
+                    self.sd = sd.InputStream(samplerate = self.samplerate, channels = 1, callback = callback)
                     self.sd.start()
                     self.status = "recording"
                     self.message = None
