@@ -25,6 +25,7 @@ import whisper
 from ollama import Client
 from TTS.api import TTS
 import emoji
+import markdown
 
 __version__ = "0.0.1"
 
@@ -322,7 +323,7 @@ class UserInterface(object):
             self.query_box.set_text(self.message)
             self.update_query = False
         if self.response is not None and self.update_reply:
-            self.reply_box.set_text(self.response.message.content)
+            self.reply_box.set_text(markdown.markdown(self.response.message.content))
             self.update_reply = False
 
     def run(self):
